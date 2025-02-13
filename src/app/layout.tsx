@@ -11,7 +11,7 @@ export default ({
 }: Readonly<{
   children: ReactNode;
 }>): JSX.Element => (
-  <html>
+  <html lang="en">
     <body>{children}</body>
   </html>
 );

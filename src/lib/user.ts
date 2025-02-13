@@ -1,6 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "./db";
-import { User, users } from "./db/schema";
+import { users } from "./db/schema";
+import type { User } from "./db/schema";
 
 export async function createUser(
   googleId: string,

@@ -7,6 +7,7 @@
     "b": "next build",
     "st": "next start",
     "f": "pnpm biome format --write .",
+    "l": "pnpm biome lint --write .",
     "dg": "drizzle-kit generate --config=drizzle.config.ts",
     "dm": "drizzle-kit migrate --config=drizzle.config.ts",
     "dp": "drizzle-kit pull --config=drizzle.config.ts",
@@ -28,5 +29,9 @@
     "@types/react-dom": "^19.0.3",
     "drizzle-kit": "^0.30.4",
     "typescript": "^5"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp"],
+    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp"]
   }
 }

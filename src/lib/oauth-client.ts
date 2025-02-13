@@ -10,7 +10,7 @@ import { sha256 } from "./sha";
 
 export enum CodeChallengeMethod {
   S256 = 0,
-  Plain,
+  Plain = 1,
 }
 
 export function createS256CodeChallenge(codeVerifier: string): string {

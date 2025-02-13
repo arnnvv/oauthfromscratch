@@ -10,7 +10,7 @@ export function LogoutButton(): JSX.Element {
   });
   return (
     <form action={action}>
-      <button>Sign out</button>
+      <button type="submit">Sign out</button>
     </form>
   );
 }
