@@ -151,48 +151,98 @@ function decodeBase64_internal(
 ): Uint8Array {
   const result = new Uint8Array(Math.ceil(encoded.length / 4) * 3);
   let totalBytes = 0;
+
   for (let i = 0; i < encoded.length; i += 4) {
-    let chunk = 0;
-    let bitsRead = 0;
-    for (let j = 0; j < 4; j++) {
-      if (padding === DecodingPadding.Required && encoded[i + j] === "=") {
-        continue;
-      }
-      if (
-        padding === DecodingPadding.Ignore &&
-        (i + j >= encoded.length || encoded[i + j] === "=")
-      ) {
-        continue;
-      }
-      if (j > 0 && encoded[i + j - 1] === "=") {
-        throw new Error("Invalid padding");
-      }
-      if (!(encoded[i + j] in decodeMap)) {
-        throw new Error("Invalid character");
-      }
-      chunk |= decodeMap[encoded[i + j]] << ((3 - j) * 6);
-      bitsRead += 6;
-    }
-    if (bitsRead < 24) {
-      let unused: number;
-      if (bitsRead === 12) {
-        unused = chunk & 0xffff;
-      } else if (bitsRead === 18) {
-        unused = chunk & 0xff;
-      } else {
-        throw new Error("Invalid padding");
-      }
-      if (unused !== 0) {
-        throw new Error("Invalid padding");
-      }
-    }
+    const group = encoded.substring(i, i + 4);
+    const { chunk, bitsRead } = processGroup(group, decodeMap, padding);
+    validateChunk(chunk, bitsRead);
     const byteLength = Math.floor(bitsRead / 8);
-    for (let i = 0; i < byteLength; i++) {
-      result[totalBytes] = (chunk >> (16 - i * 8)) & 0xff;
-      totalBytes++;
-    }
+    totalBytes = writeBytesToResult(chunk, byteLength, result, totalBytes);
   }
+
   return result.slice(0, totalBytes);
+}
+
+function processGroup(
+  group: string,
+  decodeMap: Record<string, number>,
+  padding: DecodingPadding,
+): { chunk: number; bitsRead: number } {
+  let chunk = 0;
+  let bitsRead = 0;
+
+  for (let j = 0; j < 4; j++) {
+    const currentChar = group[j];
+    if (shouldSkipChar(currentChar, j, group, padding)) continue;
+    checkPreviousPadding(j, group);
+    validateCharacter(currentChar, decodeMap);
+
+    const value = decodeMap[currentChar];
+    chunk |= value << ((3 - j) * 6);
+    bitsRead += 6;
+  }
+
+  return { chunk, bitsRead };
+}
+
+function shouldSkipChar(
+  char: string,
+  j: number,
+  group: string,
+  padding: DecodingPadding,
+): boolean {
+  if (padding === DecodingPadding.Required && char === "=") return true;
+  if (padding === DecodingPadding.Ignore) {
+    return j >= group.length || char === "=";
+  }
+  return false;
+}
+
+function checkPreviousPadding(j: number, group: string): void {
+  if (j > 0 && group[j - 1] === "=") {
+    throw new Error("Invalid padding");
+  }
+}
+
+function validateCharacter(
+  char: string,
+  decodeMap: Record<string, number>,
+): void {
+  if (!(char in decodeMap)) {
+    throw new Error("Invalid character");
+  }
+}
+
+function validateChunk(chunk: number, bitsRead: number): void {
+  if (bitsRead >= 24) return;
+
+  let mask: number;
+  switch (bitsRead) {
+    case 12:
+      mask = 0xffff;
+      break;
+    case 18:
+      mask = 0xff;
+      break;
+    default:
+      throw new Error("Invalid padding");
+  }
+
+  if ((chunk & mask) !== 0) {
+    throw new Error("Invalid padding");
+  }
+}
+
+function writeBytesToResult(
+  chunk: number,
+  byteLength: number,
+  result: Uint8Array,
+  totalBytes: number,
+): number {
+  for (let i = 0; i < byteLength; i++) {
+    result[totalBytes + i] = (chunk >> (16 - i * 8)) & 0xff;
+  }
+  return totalBytes + byteLength;
 }
 
 export function encodeBase64urlNoPadding(bytes: Uint8Array): string {
