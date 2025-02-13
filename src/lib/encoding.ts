@@ -88,31 +88,34 @@ function encodeBase32_internal(
   padding: EncodingPadding,
 ): string {
   let result = "";
-  for (let i = 0; i < bytes.byteLength; i += 5) {
-    let buffer = 0n;
-    let bufferBitSize = 0;
-    for (let j = 0; j < 5 && i + j < bytes.byteLength; j++) {
-      buffer = (buffer << 8n) | BigInt(bytes[i + j]);
-      bufferBitSize += 8;
+  let buffer = 0n;
+  let bufferBitSize = 0;
+
+  for (let i = 0; i < bytes.byteLength; i++) {
+    buffer = (buffer << 8n) | BigInt(bytes[i]);
+    bufferBitSize += 8;
+
+    while (bufferBitSize >= 5) {
+      const index = Number((buffer >> BigInt(bufferBitSize - 5)) & 0x1fn);
+      result += alphabet[index];
+      bufferBitSize -= 5;
     }
-    if (bufferBitSize % 5 !== 0) {
-      buffer = buffer << BigInt(5 - (bufferBitSize % 5));
-      bufferBitSize += 5 - (bufferBitSize % 5);
-    }
-    for (let j = 0; j < 8; j++) {
-      if (bufferBitSize >= 5) {
-        result +=
-          alphabet[Number((buffer >> BigInt(bufferBitSize - 5)) & 0x1fn)];
-        bufferBitSize -= 5;
-      } else if (bufferBitSize > 0) {
-        result +=
-          alphabet[Number((buffer << BigInt(6 - bufferBitSize)) & 0x3fn)];
-        bufferBitSize = 0;
-      } else if (padding === EncodingPadding.Include) {
+  }
+
+  if (bufferBitSize > 0) {
+    const index = Number((buffer << BigInt(5 - bufferBitSize)) & 0x1fn);
+    result += alphabet[index];
+  }
+
+  if (padding === EncodingPadding.Include) {
+    const paddingLength = 8 - (result.length % 8);
+    if (paddingLength > 0 && paddingLength < 8) {
+      for (let i = 0; i < paddingLength; i++) {
         result += "=";
       }
     }
   }
+
   return result;
 }
 
