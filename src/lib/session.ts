@@ -8,7 +8,7 @@ export async function setSessionTokenCookie(
     httpOnly: true,
     path: "/",
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     expires: expiresAt,
   });
 }
@@ -18,7 +18,7 @@ export async function deleteSessionTokenCookie(): Promise<void> {
     httpOnly: true,
     path: "/",
     secure: process.env.NODE_ENV === "production",
-    sameSite: "lax",
+    sameSite: "strict",
     maxAge: 0,
   });
 }
