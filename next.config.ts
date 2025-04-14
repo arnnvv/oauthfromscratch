@@ -12,6 +12,7 @@ const nextConfig: NextConfig = {
   experimental: {
     ppr: "incremental",
     dynamicIO: true,
+    reactCompiler: true,
   },
 };
 

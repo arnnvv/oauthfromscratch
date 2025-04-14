@@ -31,7 +31,7 @@ export const signOutAction = async (): Promise<{
       message: "Not authenticated",
     };
 
-  if (!globalPOSTRateLimit()) {
+  if (!(await globalPOSTRateLimit())) {
     return {
       message: "Too many requests",
     };
