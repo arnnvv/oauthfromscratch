@@ -1,6 +1,4 @@
-import { Pool } from "@neondatabase/serverless";
-import { drizzle } from "drizzle-orm/neon-serverless";
-import * as schema from "./schema";
+import { Pool } from "pg";
 
 export const getDB = (): string =>
   process.env.DATABASE_URL ??
@@ -8,5 +6,10 @@ export const getDB = (): string =>
     throw new Error("Missing DATABASE_URL");
   })();
 
-export const pool = new Pool({ connectionString: getDB() });
-export const db = drizzle(pool, { schema });
+export const db = new Pool({
+  connectionString: getDB(),
+  ssl:
+    process.env.NODE_ENV === "production"
+      ? { rejectUnauthorized: true }
+      : false,
+});

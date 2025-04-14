@@ -7,27 +7,20 @@
     "b": "next build",
     "st": "next start",
     "f": "pnpm biome format --write .",
-    "l": "pnpm biome lint --write .",
-    "dg": "drizzle-kit generate --config=drizzle.config.ts",
-    "dm": "drizzle-kit migrate --config=drizzle.config.ts",
-    "dp": "drizzle-kit pull --config=drizzle.config.ts",
-    "du": "drizzle-kit up --config=drizzle.config.ts",
-    "dc": "drizzle-kit check --config=drizzle.config.ts",
-    "ds": "drizzle-kit studio --config=drizzle.config.ts"
+    "l": "pnpm biome lint --write ."
   },
   "dependencies": {
-    "next": "^15.2.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "drizzle-orm": "^0.40.0",
-    "@neondatabase/serverless": "^0.10.4"
+    "next": "15.3.1-canary.7",
+    "pg": "^8.14.1",
+    "react": "^19.1.0",
+    "react-dom": "^19.1.0"
   },
   "devDependencies": {
     "@biomejs/biome": "1.9.4",
-    "@types/node": "^22.12.0",
-    "@types/react": "^19.0.10",
-    "@types/react-dom": "^19.0.4",
-    "drizzle-kit": "^0.30.5",
+    "@types/node": "^22.14.1",
+    "@types/pg": "^8.11.12",
+    "@types/react": "^19.1.1",
+    "@types/react-dom": "^19.1.2",
     "typescript": "^5"
   },
   "pnpm": {

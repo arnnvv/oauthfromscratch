@@ -12,7 +12,7 @@ export async function GET(): Promise<Response> {
         Location: "/",
       },
     });
-  if (!globalGETRateLimit()) {
+  if (!(await globalGETRateLimit())) {
     return new Response("Too many requests", {
       status: 429,
     });

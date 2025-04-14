@@ -1,7 +1,5 @@
 import { db } from "./db";
-import type { User, Session } from "./db/schema";
-import { users, sessions } from "./db/schema";
-import { eq } from "drizzle-orm";
+import type { User, Session } from "./db/types";
 import { sha256 } from "./sha";
 import { encodeBase32LowerCaseNoPadding, encodeHexLowerCase } from "./encoding";
 
@@ -25,44 +23,76 @@ export async function createSession(
   );
   const session: Session = {
     id: sessionId,
-    userId,
-    expiresAt: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
+    user_id: userId,
+    expires_at: new Date(Date.now() + 1000 * 60 * 60 * 24 * 30),
   };
-  await db.insert(sessions).values(session);
+  await db.query(
+    "INSERT INTO oauthtry_sessions (id, user_id, expires_at) VALUES ($1, $2, $3)",
+    [session.id, session.user_id, session.expires_at],
+  );
   return session;
 }
 
 export async function validateSessionToken(
   token: string,
 ): Promise<SessionValidationResult> {
+  "use cache";
   const sessionId = encodeHexLowerCase(
     await sha256(new TextEncoder().encode(token)),
   );
-  const result = await db
-    .select({ user: users, session: sessions })
-    .from(sessions)
-    .innerJoin(users, eq(sessions.userId, users.id))
-    .where(eq(sessions.id, sessionId));
-  if (result.length < 1) {
+
+  const res = await db.query(
+    `SELECT
+       u.id as u_id, u.google_id, u.email, u.name, u.picture,
+       s.id as s_id, s.user_id, s.expires_at
+     FROM oauthtry_sessions s
+     INNER JOIN oauthtry_users u ON s.user_id = u.id
+     WHERE s.id = $1
+     LIMIT 1`,
+    [sessionId],
+  );
+
+  if (res.rowCount === 0) {
     return { session: null, user: null };
   }
-  const { user, session } = result[0];
-  if (Date.now() >= session.expiresAt.getTime()) {
-    await db.delete(sessions).where(eq(sessions.id, session.id));
+  const row = res.rows[0];
+
+  const session: Session = {
+    id: row.s_id,
+    user_id: row.user_id,
+    expires_at: row.expires_at,
+  };
+
+  const user: User = {
+    id: row.u_id,
+    google_id: row.google_id,
+    email: row.email,
+    name: row.name,
+    picture: row.picture,
+  };
+
+  const now = Date.now();
+  const expiresAtMs = session.expires_at.getTime();
+
+  if (now >= expiresAtMs) {
+    await db.query("DELETE FROM oauthtry_sessions WHERE id = $1", [session.id]);
     return { session: null, user: null };
   }
-  if (Date.now() >= session.expiresAt.getTime() - 1000 * 60 * 60 * 24 * 15) {
-    session.expiresAt = new Date(Date.now() + 1000 * 60 * 60 * 24 * 30);
-    await db
-      .update(sessions)
-      .set({
-        expiresAt: session.expiresAt,
-      })
-      .where(eq(sessions.id, session.id));
+
+  // Refresh if expiring in less than 15 days
+  const fifteenDays = 1000 * 60 * 60 * 24 * 15;
+  if (now >= expiresAtMs - fifteenDays) {
+    const newExpiresAt = new Date(now + 1000 * 60 * 60 * 24 * 30);
+    await db.query(
+      "UPDATE oauthtry_sessions SET expires_at = $1 WHERE id = $2",
+      [newExpiresAt, session.id],
+    );
+    session.expires_at = newExpiresAt;
   }
+
   return { session, user };
 }
 
 export async function invalidateSession(sessionId: string): Promise<void> {
-  await db.delete(sessions).where(eq(sessions.id, sessionId));
+  await db.query("DELETE FROM oauthtry_sessions WHERE id = $1", [sessionId]);
 }

@@ -9,6 +9,10 @@ const nextConfig: NextConfig = {
       },
     ],
   },
+  experimental: {
+    ppr: "incremental",
+    dynamicIO: true,
+  },
 };
 
 export default nextConfig;
