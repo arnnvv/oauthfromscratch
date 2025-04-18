@@ -23,9 +23,5 @@
     "@types/react-dom": "^19.1.2",
     "babel-plugin-react-compiler": "19.0.0-beta-e993439-20250405",
     "typescript": "^5.8.3"
-  },
-  "pnpm": {
-    "ignoredBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp"],
-    "onlyBuiltDependencies": ["@biomejs/biome", "esbuild", "sharp"]
   }
 }
