@@ -47,3 +47,47 @@ export async function getUserFromGoogleId(
     throw error;
   }
 }
+
+export async function updateUserIfNeeded(
+  id: number,
+  updates: {
+    name?: string;
+    picture?: string;
+  },
+): Promise<void> {
+  const setClauses: string[] = [];
+  const values: (string | number)[] = [];
+  let paramIndex = 1;
+
+  if (updates.name) {
+    setClauses.push(`name = $${paramIndex++}`);
+    values.push(updates.name);
+  }
+
+  if (updates.picture) {
+    setClauses.push(`picture = $${paramIndex++}`);
+    values.push(updates.picture);
+  }
+
+  if (setClauses.length === 0) {
+    return;
+  }
+
+  values.push(id);
+  const queryString = `
+    UPDATE oauthtry_users
+    SET ${setClauses.join(", ")}
+    WHERE id = $${paramIndex}
+  `;
+
+  try {
+    await db.query(queryString, values);
+  } catch (error) {
+    console.error(
+      `Error dynamically updating user for ID ${id} with updates:`,
+      updates,
+      error,
+    );
+    throw error;
+  }
+}

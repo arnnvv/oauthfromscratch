@@ -1,6 +1,10 @@
 import { cookies } from "next/headers";
 import { decodeIdToken, google } from "@/lib/oauth";
-import { createUser, getUserFromGoogleId } from "@/lib/user";
+import {
+  createUser,
+  getUserFromGoogleId,
+  updateUserIfNeeded,
+} from "@/lib/user";
 import { createSession, generateSessionToken } from "@/lib/auth";
 import { setSessionTokenCookie } from "@/lib/session";
 import { getCurrentSession } from "@/actions";
@@ -9,6 +13,11 @@ import type { OAuth2Tokens } from "@/lib/oauth-token";
 import { globalGETRateLimit } from "@/lib/requests";
 
 export async function GET(request: Request): Promise<Response> {
+  if (!(await globalGETRateLimit())) {
+    return new Response("Too many requests", {
+      status: 429,
+    });
+  }
   const { session } = await getCurrentSession();
   if (session !== null)
     return new Response("Logged In", {
@@ -17,12 +26,6 @@ export async function GET(request: Request): Promise<Response> {
         Location: "/",
       },
     });
-
-  if (!(await globalGETRateLimit())) {
-    return new Response("Too many requests", {
-      status: 429,
-    });
-  }
   const url = new URL(request.url);
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
@@ -64,22 +67,26 @@ export async function GET(request: Request): Promise<Response> {
   const email = claimsParser.getString("email");
 
   const existingUser = await getUserFromGoogleId(googleId);
-  if (existingUser !== null) {
-    const sessionToken = generateSessionToken();
-    const session2 = await createSession(sessionToken, existingUser.id);
-    setSessionTokenCookie(sessionToken, session2.expires_at);
-    return new Response(null, {
-      status: 302,
-      headers: {
-        Location: "/",
-      },
-    });
+
+  let userId: number;
+
+  if (existingUser) {
+    userId = existingUser.id;
+    if (existingUser.name !== name || existingUser.picture !== picture) {
+      await updateUserIfNeeded(userId, {
+        name,
+        picture,
+      });
+    }
+  } else {
+    const newUser = await createUser(googleId, email, name, picture);
+    userId = newUser.id;
   }
 
-  const user = await createUser(googleId, email, name, picture);
   const sessionToken = generateSessionToken();
-  const session2 = await createSession(sessionToken, user.id);
-  setSessionTokenCookie(sessionToken, session2.expires_at);
+  const newSession = await createSession(sessionToken, userId);
+  setSessionTokenCookie(sessionToken, newSession.expires_at);
+
   return new Response(null, {
     status: 302,
     headers: {
